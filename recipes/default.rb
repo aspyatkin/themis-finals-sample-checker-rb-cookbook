@@ -1,8 +1,7 @@
 id = 'themis-finals-sample-checker-rb'
 
-include_recipe 'latest-git::default'
-include_recipe 'rbenv::default'
-include_recipe 'rbenv::ruby_build'
+include_recipe 'themis-finals::prerequisite_git'
+include_recipe 'themis-finals::prerequisite_ruby'
 
 directory node[id][:basedir] do
   owner node[id][:user]
@@ -12,13 +11,19 @@ directory node[id][:basedir] do
   action :create
 end
 
-url_repository = "https://github.com/#{node[id][:repository]}"
+url_repository = "https://github.com/#{node[id][:github_repository]}"
 
 if node.chef_environment.start_with? 'development'
-  ssh_key_map = data_bag_item('ssh', node.chef_environment).to_hash.fetch('keys', {})
+  ssh_data_bag_item = nil
+  begin
+    ssh_data_bag_item = data_bag_item('ssh', node.chef_environment)
+  rescue
+  end
+
+  ssh_key_map = (ssh_data_bag_item.nil?) ? {} : ssh_data_bag_item.to_hash.fetch('keys', {})
 
   if ssh_key_map.size > 0
-    url_repository = "git@github.com:#{node[id][:repository]}.git"
+    url_repository = "git@github.com:#{node[id][:github_repository]}.git"
   end
 end
 
@@ -31,8 +36,16 @@ git2 node[id][:basedir] do
 end
 
 if node.chef_environment.start_with? 'development'
-  data_bag_item('git', node.chef_environment).to_hash.fetch('config', {}).each do |key, value|
-    git_config "Git config #{key} at #{node[id][:basedir]}" do
+  git_data_bag_item = nil
+  begin
+    git_data_bag_item = data_bag_item('git', node.chef_environment)
+  rescue
+  end
+
+  git_options = (git_data_bag_item.nil?) ? {} : git_data_bag_item.to_hash.fetch('config', {})
+
+  git_options.each do |key, value|
+    git_config "git-config #{key} at #{node[id][:basedir]}" do
       key key
       value value
       scope 'local'
@@ -43,26 +56,17 @@ if node.chef_environment.start_with? 'development'
   end
 end
 
-ENV['CONFIGURE_OPTS'] = '--disable-install-rdoc'
-
-rbenv_ruby node[id][:ruby_version] do
-  ruby_version node[id][:ruby_version]
-  global true
-end
-
-rbenv_gem 'bundler' do
-  ruby_version node[id][:ruby_version]
-end
-
-rbenv_execute "Install bundle at #{node[id][:basedir]}" do
+rbenv_execute "Install dependencies at #{node[id][:basedir]}" do
   command 'bundle'
-  ruby_version node[id][:ruby_version]
+  ruby_version node['themis-finals'][:ruby][:version]
   cwd node[id][:basedir]
   user node[id][:user]
   group node[id][:group]
 end
 
-template "#{node['themis-finals'][:basedir]}/god.d/sample-checker-rb.god" do
+god_basedir = ::File.join node['themis-finals'][:basedir], 'god.d'
+
+template "#{god_basedir}/sample-checker-rb.god" do
   source 'checker.god.erb'
   mode 0644
   variables(
@@ -70,9 +74,9 @@ template "#{node['themis-finals'][:basedir]}/god.d/sample-checker-rb.god" do
     user: node[id][:user],
     group: node[id][:group],
     service_alias: node[id][:service_alias],
-    log_level: node[id][:log_level],
-    stdout_sync: node[id][:stdout_sync],
-    beanstalkd_uri: "#{node['themis-finals']['beanstalkd']['listen']['address']}:#{node['themis-finals']['beanstalkd']['listen']['port']}",
+    log_level: node[id][:debug] ? 'DEBUG' : 'INFO',
+    stdout_sync: node[id][:debug],
+    beanstalkd_uri: "#{node['themis-finals'][:beanstalkd][:listen][:address]}:#{node['themis-finals'][:beanstalkd][:listen][:port]}",
     processes: node[id][:processes]
   )
   action :create
