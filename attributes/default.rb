@@ -2,7 +2,7 @@ id = 'themis-finals-sample-checker-rb'
 
 default[id][:basedir] = '/var/themis/finals/checkers/sample-checker-rb'
 default[id][:github_repository] = 'aspyatkin/themis-finals-sample-checker-rb'
-default[id][:revision] = 'master'
+default[id][:revision] = 'develop'
 default[id][:user] = 'vagrant'
 default[id][:group] = 'vagrant'
 
