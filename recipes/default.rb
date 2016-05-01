@@ -77,6 +77,7 @@ template "#{god_basedir}/sample-checker-rb.god" do
     log_level: node[id][:debug] ? 'DEBUG' : 'INFO',
     stdout_sync: node[id][:debug],
     beanstalkd_uri: "#{node['themis-finals'][:beanstalkd][:listen][:address]}:#{node['themis-finals'][:beanstalkd][:listen][:port]}",
+    beanstalkd_tube_namespace: node['themis-finals'][:beanstalkd][:tube_namespace],
     processes: node[id][:processes]
   )
   action :create
