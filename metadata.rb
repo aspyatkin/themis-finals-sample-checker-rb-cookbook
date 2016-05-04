@@ -1,6 +1,6 @@
 name 'themis-finals-sample-checker-rb'
 description 'Installs and configures Themis Finals sample Ruby checker'
-version '1.1.3'
+version '1.1.4'
 
 recipe 'themis-finals-sample-checker-rb', 'Installs and configures Themis Finals sample Ruby checker'
 depends 'latest-git', '~> 1.1.6'

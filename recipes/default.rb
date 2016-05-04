@@ -70,6 +70,27 @@ logs_basedir = ::File.join node[id][:basedir], 'logs'
 namespace = "#{node['themis-finals'][:supervisor][:namespace]}.service.#{node[id][:service_alias]}"
 rbenv_root = node[:rbenv][:root_path]
 
+sentry_data_bag_item = nil
+begin
+  sentry_data_bag_item = data_bag_item('sentry', node.chef_environment)
+rescue
+end
+
+sentry_dsn = (sentry_data_bag_item.nil?) ? {} : sentry_data_bag_item.to_hash.fetch('dsn', {})
+
+checker_environment = {
+  'APP_INSTANCE' => '%(process_num)s',
+  'LOG_LEVEL' => node[id][:debug] ? 'DEBUG' : 'INFO',
+  'STDOUT_SYNC' => node[id][:debug],
+  'BEANSTALKD_URI' => "#{node['themis-finals'][:beanstalkd][:listen][:address]}:#{node['themis-finals'][:beanstalkd][:listen][:port]}",
+  'TUBE_LISTEN' => "#{node['themis-finals'][:beanstalkd][:tube_namespace]}.service.#{node[id][:service_alias]}.listen",
+  'TUBE_REPORT' => "#{node['themis-finals'][:beanstalkd][:tube_namespace]}.service.#{node[id][:service_alias]}.report"
+}
+
+unless sentry_dsn.fetch(node[id][:service_alias], nil).nil?
+  checker_environment['SENTRY_DSN'] = sentry_dsn.fetch(node[id][:service_alias])
+end
+
 supervisor_service "#{namespace}.checker" do
   command "#{rbenv_root}/shims/bundle exec ruby checker.rb"
   process_name 'checker-%(process_num)s'
@@ -97,14 +118,7 @@ supervisor_service "#{namespace}.checker" do
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
   stderr_events_enabled false
-  environment(
-    'APP_INSTANCE' => '%(process_num)s',
-    'LOG_LEVEL' => node[id][:debug] ? 'DEBUG' : 'INFO',
-    'STDOUT_SYNC' => node[id][:debug],
-    'BEANSTALKD_URI' => "#{node['themis-finals'][:beanstalkd][:listen][:address]}:#{node['themis-finals'][:beanstalkd][:listen][:port]}",
-    'TUBE_LISTEN' => "#{node['themis-finals'][:beanstalkd][:tube_namespace]}.service.#{node[id][:service_alias]}.listen",
-    'TUBE_REPORT' => "#{node['themis-finals'][:beanstalkd][:tube_namespace]}.service.#{node[id][:service_alias]}.report"
-  )
+  environment checker_environment
   directory node[id][:basedir]
   serverurl 'AUTO'
   action :enable
