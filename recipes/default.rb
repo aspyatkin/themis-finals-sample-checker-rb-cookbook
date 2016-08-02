@@ -65,6 +65,17 @@ end
 #   group node[id][:group]
 # end
 
+execute "Bootstrap checker at #{node[id]['basedir']}" do
+  command 'sh script/bootstrap'
+  cwd node[id]['basedir']
+  user node[id]['user']
+  group node[id]['group']
+  environment(
+    'PATH' => "/usr/bin/env:/opt/rbenv/shims:#{ENV['PATH']}",
+  )
+  action :run
+end
+
 logs_basedir = ::File.join node[id][:basedir], 'logs'
 
 namespace = "#{node['themis-finals'][:supervisor][:namespace]}.checker.#{node[id][:service_alias]}"
