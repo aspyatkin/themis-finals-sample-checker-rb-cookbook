@@ -4,15 +4,15 @@ include_recipe 'themis-finals::prerequisite_git'
 include_recipe 'themis-finals::prerequisite_ruby'
 include_recipe 'themis-finals::prerequisite_supervisor'
 
-directory node[id][:basedir] do
-  owner node[id][:user]
-  group node[id][:group]
+directory node[id]['basedir'] do
+  owner node[id]['user']
+  group node[id]['group']
   mode 0755
   recursive true
   action :create
 end
 
-url_repository = "https://github.com/#{node[id][:github_repository]}"
+url_repository = "https://github.com/#{node[id]['github_repository']}"
 
 if node.chef_environment.start_with? 'development'
   ssh_data_bag_item = nil
@@ -24,15 +24,15 @@ if node.chef_environment.start_with? 'development'
   ssh_key_map = (ssh_data_bag_item.nil?) ? {} : ssh_data_bag_item.to_hash.fetch('keys', {})
 
   if ssh_key_map.size > 0
-    url_repository = "git@github.com:#{node[id][:github_repository]}.git"
+    url_repository = "git@github.com:#{node[id]['github_repository']}.git"
   end
 end
 
-git2 node[id][:basedir] do
+git2 node[id]['basedir'] do
   url url_repository
-  branch node[id][:revision]
-  user node[id][:user]
-  group node[id][:group]
+  branch node[id]['revision']
+  user node[id]['user']
+  group node[id]['group']
   action :create
 end
 
@@ -46,24 +46,16 @@ if node.chef_environment.start_with? 'development'
   git_options = (git_data_bag_item.nil?) ? {} : git_data_bag_item.to_hash.fetch('config', {})
 
   git_options.each do |key, value|
-    git_config "git-config #{key} at #{node[id][:basedir]}" do
+    git_config "git-config #{key} at #{node[id]['basedir']}" do
       key key
       value value
       scope 'local'
-      path node[id][:basedir]
-      user node[id][:user]
+      path node[id]['basedir']
+      user node[id]['user']
       action :set
     end
   end
 end
-
-# rbenv_execute "Install dependencies at #{node[id][:basedir]}" do
-#   command 'bundle'
-#   ruby_version node['themis-finals'][:ruby][:version]
-#   cwd node[id][:basedir]
-#   user node[id][:user]
-#   group node[id][:group]
-# end
 
 execute "Bootstrap checker at #{node[id]['basedir']}" do
   command 'sh script/bootstrap'
@@ -71,15 +63,15 @@ execute "Bootstrap checker at #{node[id]['basedir']}" do
   user node[id]['user']
   group node[id]['group']
   environment(
-    'PATH' => "/usr/bin/env:/opt/rbenv/shims:#{ENV['PATH']}",
+    'PATH' => "/usr/bin/env:/opt/rbenv/shims:#{ENV['PATH']}"
   )
   action :run
 end
 
-logs_basedir = ::File.join node[id][:basedir], 'logs'
+logs_basedir = ::File.join node[id]['basedir'], 'logs'
 
-namespace = "#{node['themis-finals'][:supervisor][:namespace]}.checker.#{node[id][:service_alias]}"
-# rbenv_root = node[:rbenv][:root_path]
+namespace = "#{node['themis-finals']['supervisor']['namespace']}.checker.#{node[id]['service_alias']}"
+# rbenv_root = node['rbenv']['root_path']
 
 # sentry_data_bag_item = nil
 # begin
@@ -94,22 +86,18 @@ checker_environment = {
   'HOST' => '127.0.0.1',
   'PORT' => '10000',
   'INSTANCE' => '%(process_num)s',
-  # 'APP_INSTANCE' => '%(process_num)s',
-  'LOG_LEVEL' => node[id][:debug] ? 'DEBUG' : 'INFO',
-  'STDOUT_SYNC' => node[id][:debug],
-  # 'BEANSTALKD_URI' => "#{node['themis-finals'][:beanstalkd][:listen][:address]}:#{node['themis-finals'][:beanstalkd][:listen][:port]}",
-  # 'TUBE_LISTEN' => "#{node['themis-finals'][:beanstalkd][:tube_namespace]}.service.#{node[id][:service_alias]}.listen",
-  # 'TUBE_REPORT' => "#{node['themis-finals'][:beanstalkd][:tube_namespace]}.service.#{node[id][:service_alias]}.report"
+  'LOG_LEVEL' => node[id]['debug'] ? 'DEBUG' : 'INFO',
+  'STDOUT_SYNC' => node[id]['debug']
 }
 
-# unless sentry_dsn.fetch(node[id][:service_alias], nil).nil?
+# unless sentry_dsn.fetch(node[id]['service_alias'], nil).nil?
 #   checker_environment['SENTRY_DSN'] = sentry_dsn.fetch(node[id][:service_alias])
 # end
 
 supervisor_service "#{namespace}.server" do
   command 'sh script/server'
   process_name 'server-%(process_num)s'
-  numprocs node[id][:server][:processes]
+  numprocs node[id]['server']['processes']
   numprocs_start 0
   priority 300
   autostart false
@@ -121,7 +109,7 @@ supervisor_service "#{namespace}.server" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id][:user]
+  user node[id]['user']
   redirect_stderr false
   stdout_logfile ::File.join logs_basedir, 'server-%(process_num)s-stdout.log'
   stdout_logfile_maxbytes '10MB'
@@ -134,7 +122,7 @@ supervisor_service "#{namespace}.server" do
   stderr_capture_maxbytes '0'
   stderr_events_enabled false
   environment checker_environment
-  directory node[id][:basedir]
+  directory node[id]['basedir']
   serverurl 'AUTO'
   action :enable
 end
@@ -142,7 +130,7 @@ end
 supervisor_service "#{namespace}.queue" do
   command 'sh script/queue'
   process_name 'queue-%(process_num)s'
-  numprocs node[id][:queue][:processes]
+  numprocs node[id]['queue']['processes']
   numprocs_start 0
   priority 300
   autostart false
@@ -154,7 +142,7 @@ supervisor_service "#{namespace}.queue" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id][:user]
+  user node[id]['user']
   redirect_stderr false
   stdout_logfile ::File.join logs_basedir, 'queue-%(process_num)s-stdout.log'
   stdout_logfile_maxbytes '10MB'
@@ -167,7 +155,7 @@ supervisor_service "#{namespace}.queue" do
   stderr_capture_maxbytes '0'
   stderr_events_enabled false
   environment checker_environment
-  directory node[id][:basedir]
+  directory node[id]['basedir']
   serverurl 'AUTO'
   action :enable
 end
@@ -180,18 +168,18 @@ supervisor_group namespace do
   action :enable
 end
 
-template "#{node[:nginx][:dir]}/sites-available/themis-finals-checker-#{node[id][:service_alias]}.conf" do
+template "#{node['nginx']['dir']}/sites-available/themis-finals-checker-#{node[id]['service_alias']}.conf" do
   source 'nginx.conf.erb'
   mode 0644
   variables(
     server_name: node[id]['fqdn'],
-    service_name: node[id][:service_alias],
+    service_name: node[id]['service_alias'],
     logs_basedir: logs_basedir,
-    server_processes: node[id][:server][:processes],
-    server_port_start: 10_000,
+    server_processes: node[id]['server']['processes'],
+    server_port_start: 10_000
   )
   notifies :reload, 'service[nginx]', :delayed
   action :create
 end
 
-nginx_site "themis-finals-checker-#{node[id][:service_alias]}.conf"
+nginx_site "themis-finals-checker-#{node[id]['service_alias']}.conf"
