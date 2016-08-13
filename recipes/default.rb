@@ -84,10 +84,13 @@ namespace = "#{node['themis-finals']['supervisor']['namespace']}.checker.#{node[
 checker_environment = {
   'PATH' => '/usr/bin/env:/opt/rbenv/shims:%(ENV_PATH)s',
   'HOST' => '127.0.0.1',
-  'PORT' => '10000',
+  'PORT' => node[id]['server']['port_range_start'],
   'INSTANCE' => '%(process_num)s',
   'LOG_LEVEL' => node[id]['debug'] ? 'DEBUG' : 'INFO',
   'STDOUT_SYNC' => node[id]['debug'],
+  'REDIS_HOST' => node['themis-finals']['redis']['host'],
+  'REDIS_PORT' => node['themis-finals']['redis']['port'],
+  'REDIS_DB' => node[id]['queue']['redis_db'],
   'THEMIS_FINALS_KEY_NONCE_SIZE' => node['themis-finals']['key_nonce_size'],
   'THEMIS_FINALS_AUTH_TOKEN_HEADER' => node['themis-finals']['auth_token_header']
 }
@@ -182,7 +185,7 @@ template "#{node['nginx']['dir']}/sites-available/themis-finals-checker-#{node[i
     service_name: node[id]['service_alias'],
     logs_basedir: logs_basedir,
     server_processes: node[id]['server']['processes'],
-    server_port_start: 10_000
+    server_port_start: node[id]['server']['port_range_start']
   )
   notifies :reload, 'service[nginx]', :delayed
   action :create
