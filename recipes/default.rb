@@ -87,7 +87,9 @@ checker_environment = {
   'PORT' => '10000',
   'INSTANCE' => '%(process_num)s',
   'LOG_LEVEL' => node[id]['debug'] ? 'DEBUG' : 'INFO',
-  'STDOUT_SYNC' => node[id]['debug']
+  'STDOUT_SYNC' => node[id]['debug'],
+  'THEMIS_FINALS_KEY_NONCE_SIZE' => node['themis-finals']['key_nonce_size'],
+  'THEMIS_FINALS_AUTH_TOKEN_HEADER' => node['themis-finals']['auth_token_header']
 }
 
 # unless sentry_dsn.fetch(node[id]['service_alias'], nil).nil?
@@ -121,7 +123,9 @@ supervisor_service "#{namespace}.server" do
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
   stderr_events_enabled false
-  environment checker_environment
+  environment checker_environment.merge(
+    'THEMIS_FINALS_MASTER_KEY' => data_bag_item('themis-finals', node.chef_environment)['keys']['master']
+  )
   directory node[id]['basedir']
   serverurl 'AUTO'
   action :enable
@@ -154,7 +158,9 @@ supervisor_service "#{namespace}.queue" do
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
   stderr_events_enabled false
-  environment checker_environment
+  environment checker_environment.merge(
+    'THEMIS_FINALS_CHECKER_KEY' => data_bag_item('themis-finals', node.chef_environment)['keys']['checker']
+  )
   directory node[id]['basedir']
   serverurl 'AUTO'
   action :enable
