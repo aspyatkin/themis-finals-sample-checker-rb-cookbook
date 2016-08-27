@@ -1,8 +1,9 @@
 id = 'themis-finals-sample-checker-rb'
 
-include_recipe 'themis-finals::prerequisite_git'
-include_recipe 'themis-finals::prerequisite_ruby'
-include_recipe 'themis-finals::prerequisite_supervisor'
+include_recipe "#{id}::ruby"
+include_recipe 'modern_nginx::default'
+include_recipe 'latest-redis::default'
+include_recipe 'supervisor::default'
 
 directory node[id]['basedir'] do
   owner node[id]['user']
@@ -25,6 +26,7 @@ if node.chef_environment.start_with? 'development'
 
   if ssh_key_map.size > 0
     url_repository = "git@github.com:#{node[id]['github_repository']}.git"
+    ssh_known_hosts_entry 'github.com'
   end
 end
 
@@ -88,8 +90,8 @@ checker_environment = {
   'INSTANCE' => '%(process_num)s',
   'LOG_LEVEL' => node[id]['debug'] ? 'DEBUG' : 'INFO',
   'STDOUT_SYNC' => node[id]['debug'],
-  'REDIS_HOST' => node['themis-finals']['redis']['host'],
-  'REDIS_PORT' => node['themis-finals']['redis']['port'],
+  'REDIS_HOST' => node['latest-redis']['listen']['host'],
+  'REDIS_PORT' => node['latest-redis']['listen']['port'],
   'REDIS_DB' => node[id]['queue']['redis_db'],
   'THEMIS_FINALS_KEY_NONCE_SIZE' => node['themis-finals']['key_nonce_size'],
   'THEMIS_FINALS_AUTH_TOKEN_HEADER' => node['themis-finals']['auth_token_header']
