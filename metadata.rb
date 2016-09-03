@@ -1,8 +1,8 @@
-name 'themis-finals-sample-checker-rb'
-description 'Installs and configures Themis Finals sample Ruby checker'
-version '1.1.12'
+name 'themis-finals-service1-checker'
+description 'Installs and configures Themis Finals sample service1 checker'
+version '1.1.13'
 
-recipe 'themis-finals-sample-checker-rb', 'Installs and configures Themis Finals sample Ruby checker'
+recipe 'themis-finals-service1-checker', 'Installs and configures Themis Finals sample service1 checker'
 depends 'latest-git', '~> 1.1.11'
 depends 'git2', '~> 1.0.0'
 depends 'rbenv', '1.7.1'

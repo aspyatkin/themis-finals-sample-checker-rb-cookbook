@@ -1,8 +1,8 @@
-id = 'themis-finals-sample-checker-rb'
+id = 'themis-finals-service1-checker'
 
 default[id]['basedir'] = '/var/themis/finals/checker/service1'
-default[id]['github_repository'] = 'aspyatkin/themis-finals-sample-checker-rb'
-default[id]['revision'] = 'develop'
+default[id]['github_repository'] = 'aspyatkin/themis-finals-service1-checker'
+default[id]['revision'] = 'master'
 default[id]['user'] = 'vagrant'
 default[id]['group'] = 'vagrant'
 
