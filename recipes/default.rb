@@ -69,7 +69,7 @@ end
 
 logs_basedir = ::File.join node[id]['basedir'], 'logs'
 
-namespace = "#{node['themis-finals']['supervisor']['namespace']}.checker."\
+namespace = "#{node['themis-finals']['supervisor_namespace']}.checker."\
             "#{node[id]['service_alias']}"
 # rbenv_root = node['rbenv']['root_path']
 
