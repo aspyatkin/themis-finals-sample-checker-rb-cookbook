@@ -56,13 +56,15 @@ if node.chef_environment.start_with? 'development'
   end
 end
 
+rbenv_shims_path = ::File.join node['rbenv']['root_path'], 'shims'
+
 execute "Bootstrap checker at #{node[id]['basedir']}" do
   command 'sh script/bootstrap'
   cwd node[id]['basedir']
   user node[id]['user']
   group node[id]['group']
   environment(
-    'PATH' => "/usr/bin/env:/opt/rbenv/shims:#{ENV['PATH']}"
+    'PATH' => "/usr/bin/env:#{rbenv_shims_path}:#{ENV['PATH']}"
   )
   action :run
 end
@@ -71,7 +73,6 @@ logs_basedir = ::File.join node[id]['basedir'], 'logs'
 
 namespace = "#{node['themis-finals']['supervisor_namespace']}.checker."\
             "#{node[id]['service_alias']}"
-# rbenv_root = node['rbenv']['root_path']
 
 # sentry_data_bag_item = nil
 # begin
@@ -87,7 +88,7 @@ namespace = "#{node['themis-finals']['supervisor_namespace']}.checker."\
 #   end
 
 checker_environment = {
-  'PATH' => '/usr/bin/env:/opt/rbenv/shims:%(ENV_PATH)s',
+  'PATH' => "/usr/bin/env:#{rbenv_shims_path}:%(ENV_PATH)s",
   'HOST' => '127.0.0.1',
   'PORT' => node[id]['server']['port_range_start'],
   'INSTANCE' => '%(process_num)s',
@@ -112,7 +113,7 @@ supervisor_service "#{namespace}.server" do
   numprocs node[id]['server']['processes']
   numprocs_start 0
   priority 300
-  autostart false
+  autostart node[id]['autostart']
   autorestart true
   startsecs 1
   startretries 3
@@ -148,7 +149,7 @@ supervisor_service "#{namespace}.queue" do
   numprocs node[id]['queue']['processes']
   numprocs_start 0
   priority 300
-  autostart false
+  autostart node[id]['autostart']
   autorestart true
   startsecs 1
   startretries 3
@@ -196,7 +197,8 @@ template "#{node['nginx']['dir']}/sites-available/#{ngx_conf_file}" do
     service_name: node[id]['service_alias'],
     logs_basedir: logs_basedir,
     server_processes: node[id]['server']['processes'],
-    server_port_start: node[id]['server']['port_range_start']
+    server_port_start: node[id]['server']['port_range_start'],
+    internal_networks: node['themis-finals']['config']['internal_networks']
   )
   notifies :reload, 'service[nginx]', :delayed
   action :create
