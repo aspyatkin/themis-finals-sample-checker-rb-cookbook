@@ -1,10 +1,13 @@
 id = 'themis-finals-service1-checker'
 
-include_recipe "#{id}::ruby"
+h = ::ChefCookbook::Instance::Helper.new(node)
+service_h = ::ChefCookbook::Themis::Finals::Service1::Helper.new(node)
+
+include_recipe "themis-finals-utils::install_ruby"
 
 directory node[id]['basedir'] do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
@@ -13,7 +16,7 @@ end
 url_repository = "https://github.com/#{node[id]['github_repository']}"
 
 if node.chef_environment.start_with?('development')
-  ssh_private_key node[id]['user']
+  ssh_private_key h.instance_user
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['github_repository']}.git"
 end
@@ -21,8 +24,8 @@ end
 git2 node[id]['basedir'] do
   url url_repository
   branch node[id]['revision']
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   action :create
 end
 
@@ -47,7 +50,7 @@ if node.chef_environment.start_with?('development')
       value value
       scope 'local'
       path node[id]['basedir']
-      user node[id]['user']
+      user h.instance_user
       action :set
     end
   end
@@ -58,8 +61,8 @@ rbenv_shims_path = ::File.join(node['rbenv']['root_path'], 'shims')
 execute "Bootstrap checker at #{node[id]['basedir']}" do
   command 'sh script/bootstrap'
   cwd node[id]['basedir']
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   environment(
     'PATH' => "/usr/bin/env:#{rbenv_shims_path}:#{ENV['PATH']}"
   )
@@ -119,7 +122,7 @@ supervisor_service "#{namespace}.server" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_basedir, 'server-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -155,7 +158,7 @@ supervisor_service "#{namespace}.queue" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_basedir, 'queue-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -190,7 +193,7 @@ end
 nginx_site "themis-finals-checker-#{node[id]['service_alias']}" do
   template 'nginx.conf.erb'
   variables(
-    server_name: node[id]['fqdn'],
+    server_name: service_h.fqdn,
     service_name: node[id]['service_alias'],
     logs_basedir: logs_basedir,
     server_processes: node[id]['server']['processes'],
